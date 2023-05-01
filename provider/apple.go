@@ -137,10 +137,10 @@ func (lf LoadFromFileFunc) LoadPrivateKey() ([]byte, error) {
 // NewApple create new AppleProvider instance with a user parameters
 // Private key must be set, when instance create call, for create `client_secret`
 func NewApple(p Params, appleCfg AppleConfig, privateKeyLoader PrivateKeyLoaderInterface) (*AppleHandler, error) {
-
 	if p.L == nil {
 		p.L = logger.NoOp{}
 	}
+
 	var emptyParams []string
 
 	// check required parameters filled
@@ -170,7 +170,7 @@ func NewApple(p Params, appleCfg AppleConfig, privateKeyLoader PrivateKeyLoaderI
 			ClientID:     appleCfg.ClientID,
 			TeamID:       appleCfg.TeamID,
 			KeyID:        appleCfg.KeyID,
-			scopes:       []string{"name"},
+			scopes:       appleCfg.scopes,
 			jwkURL:       appleKeysURL,
 			ResponseMode: responseMode,
 		},

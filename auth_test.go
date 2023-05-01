@@ -32,7 +32,7 @@ func TestNewService(t *testing.T) {
 		Issuer:         "my-test-app",
 		URL:            "http://127.0.0.1:8089",
 		AvatarStore:    avatar.NewLocalFS("/tmp"),
-		Logger:         logger.Std,
+		Logger:         logger.Std{},
 	}
 
 	svc := NewService(options)
@@ -45,7 +45,7 @@ func TestProvider(t *testing.T) {
 	options := Opts{
 		SecretReader: token.SecretFunc(func(string) (string, error) { return "secret", nil }),
 		URL:          "http://127.0.0.1:8089",
-		Logger:       logger.Std,
+		Logger:       logger.Std{},
 	}
 	svc := NewService(options)
 
@@ -92,7 +92,7 @@ func TestService_AddAppleProvider(t *testing.T) {
 	options := Opts{
 		SecretReader: token.SecretFunc(func(string) (string, error) { return "secret", nil }),
 		URL:          "http://127.0.0.1:8089",
-		Logger:       logger.Std,
+		Logger:       logger.Std{},
 	}
 	svc := NewService(options)
 
@@ -301,7 +301,7 @@ func TestLogout(t *testing.T) {
 }
 
 func TestLogoutNoProviders(t *testing.T) {
-	svc := NewService(Opts{Logger: logger.Std})
+	svc := NewService(Opts{Logger: logger.Std{}})
 	authRoute, _ := svc.Handlers()
 
 	mux := http.NewServeMux()
@@ -505,7 +505,7 @@ func prepService(t *testing.T) (svc *Service, teardown func()) { //nolint unpara
 		AvatarResizeLimit: 120,
 		AvatarRoutePath:   "/api/v1/avatar",
 		AdminPasswd:       "password",
-		Logger:            logger.Std,
+		Logger:            logger.Std{},
 	}
 
 	svc = NewService(options)

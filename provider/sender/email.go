@@ -76,7 +76,7 @@ func NewEmailClient(emailParams EmailParams, l logger.L) *Email {
 
 // Send email with given text
 func (e *Email) Send(to, text string) error {
-	e.Logf("[DEBUG] send %q to %s", text, to)
+	e.Debug("[DEBUG] send %q to %s", text, to)
 	return e.sender.Send(text, email.Params{
 		From:    e.From,
 		To:      []string{to},

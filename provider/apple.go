@@ -139,7 +139,7 @@ func (lf LoadFromFileFunc) LoadPrivateKey() ([]byte, error) {
 func NewApple(p Params, appleCfg AppleConfig, privateKeyLoader PrivateKeyLoaderInterface) (*AppleHandler, error) {
 
 	if p.L == nil {
-		p.L = logger.NoOp
+		p.L = logger.NoOp{}
 	}
 	var emptyParams []string
 
@@ -241,7 +241,7 @@ func (ah *AppleHandler) Name() string { return ah.name }
 // LoginHandler - GET */{provider-name}/login
 func (ah *AppleHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
-	ah.Logf("[DEBUG] login with %s", ah.Name())
+	ah.Debug("[DEBUG] login with %s", ah.Name())
 	// make state (random) and store in session
 	state, err := randToken()
 	if err != nil {
@@ -278,11 +278,11 @@ func (ah *AppleHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	loginURL, err := ah.prepareLoginURL(state, r.URL.Path)
 	if err != nil {
 		errMsg := fmt.Sprintf("prepare login url for [%s] provider failed", ah.name)
-		ah.Logf("[ERROR] %s", errMsg)
+		ah.Error("[ERROR] %s", errMsg)
 		rest.SendErrorJSON(w, r, ah.L, http.StatusInternalServerError, err, errMsg)
 		return
 	}
-	ah.Logf("[DEBUG] login url %s, claims=%+v", loginURL, claims)
+	ah.Debug("[DEBUG] login url %s, claims=%+v", loginURL, claims)
 
 	http.Redirect(w, r, loginURL, http.StatusFound)
 }
@@ -328,7 +328,7 @@ func (ah AppleHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		rest.SendErrorJSON(w, r, ah.L, http.StatusInternalServerError, err, "exchange failed")
 		return
 	}
-	ah.Logf("[DEBUG] response data %+v", resp)
+	ah.Debug("[DEBUG] response data %+v", resp)
 	if resp.Error != "" {
 		rest.SendErrorJSON(w, r, ah.L, http.StatusInternalServerError, nil, fmt.Sprintf("fetch IDtoken response error: %s", resp.Error))
 		return
@@ -337,7 +337,7 @@ func (ah AppleHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	// trying to fetch Apple public key (JWK) for verify token signature, it need for verify IDToken received from Apple
 	keySet, err := fetchAppleJWK(r.Context(), ah.conf.jwkURL)
 	if err != nil {
-		ah.L.Logf("[ERROR] failed to fetch JWK from Apple key service: " + err.Error())
+		ah.L.Error("[ERROR] failed to fetch JWK from Apple key service: " + err.Error())
 		rest.SendErrorJSON(w, r, ah.L, http.StatusInternalServerError, nil, fmt.Sprintf("failed to fetch JWK from Apple key service: %s", resp.Error))
 		return
 	}
@@ -346,7 +346,7 @@ func (ah AppleHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	tokenClaims := jwt.MapClaims{}
 	_, err = jwt.ParseWithClaims(resp.IDToken, tokenClaims, keySet.keyFunc)
 	if err != nil {
-		ah.L.Logf("[ERROR] failed to get claims: " + err.Error())
+		ah.L.Error("[ERROR] failed to get claims: " + err.Error())
 		rest.SendErrorJSON(w, r, ah.L, http.StatusInternalServerError, nil, fmt.Sprintf("failed to token validation, key is invalid: %s", resp.Error))
 		return
 	}
@@ -383,7 +383,7 @@ func (ah AppleHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ah.Logf("[DEBUG] user info %+v", u)
+	ah.Debug("[DEBUG] user info %+v", u)
 
 	// redirect to back url if presented in login query params
 	if oauthClaims.Handshake != nil && oauthClaims.Handshake.From != "" {
@@ -445,7 +445,7 @@ func (ah *AppleHandler) exchange(ctx context.Context, code, redirectURI string, 
 
 	defer func() {
 		if err = res.Body.Close(); err != nil {
-			ah.L.Logf("[ERROR] close request body failed when get access token: %v", err)
+			ah.L.Error("[ERROR] close request body failed when get access token: %v", err)
 		}
 	}()
 
@@ -498,7 +498,7 @@ func (ah *AppleHandler) parseUserData(user *token.User, jUser string) {
 
 	// Catch error for log only. No need break flow if user name doesn't exist
 	if err := json.Unmarshal([]byte(jUser), &userData); err != nil {
-		ah.L.Logf("[DEBUG] failed to parse user data %s: %v", user, err)
+		ah.L.Debug("[DEBUG] failed to parse user data %s: %v", user, err)
 		user.Name = "noname_" + user.ID[6:12] // paste noname if user name failed to parse
 		return
 	}

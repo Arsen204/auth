@@ -88,7 +88,7 @@ func (th *TelegramHandler) Run(ctx context.Context) error {
 		case <-processUpdatedTicker.C:
 			updates, err := th.Telegram.GetUpdates(ctx)
 			if err != nil {
-				th.Logf("Error while getting telegram updates: %v", err)
+				th.Error("[ERROR] error while getting telegram updates: %v", err)
 				continue
 			}
 			th.processUpdates(ctx, updates)
@@ -172,7 +172,7 @@ func (th *TelegramHandler) processUpdates(ctx context.Context, updates *telegram
 			th.requests.RUnlock()
 			err := th.Telegram.Send(ctx, update.Message.Chat.ID, th.ErrorMsg)
 			if err != nil {
-				th.Logf("failed to notify telegram peer: %v", err)
+				th.Error("[ERROR] failed to notify telegram peer: %v", err)
 			}
 			continue
 		}
@@ -180,7 +180,7 @@ func (th *TelegramHandler) processUpdates(ctx context.Context, updates *telegram
 
 		avatarURL, err := th.Telegram.Avatar(ctx, update.Message.Chat.ID)
 		if err != nil {
-			th.Logf("failed to get user avatar: %v", err)
+			th.Error("[ERROR] failed to get user avatar: %v", err)
 			continue
 		}
 
@@ -199,7 +199,7 @@ func (th *TelegramHandler) processUpdates(ctx context.Context, updates *telegram
 
 		err = th.Telegram.Send(ctx, update.Message.Chat.ID, th.SuccessMsg)
 		if err != nil {
-			th.Logf("failed to notify telegram peer: %v", err)
+			th.Error("[ERROR] failed to notify telegram peer: %v", err)
 		}
 	}
 }

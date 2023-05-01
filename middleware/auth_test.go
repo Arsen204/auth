@@ -496,7 +496,7 @@ func makeTestAuth(_ *testing.T) Authenticator {
 		AdminPasswd: "123456",
 		JWTService:  j,
 		Validator:   token.ValidatorFunc(func(token string, claims token.Claims) bool { return true }),
-		L:           logger.Std,
+		L:           logger.Std{},
 	}
 }
 

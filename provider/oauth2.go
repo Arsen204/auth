@@ -63,7 +63,7 @@ type BearerTokenHook func(provider string, user token.User, token oauth2.Token)
 // initOauth2Handler makes oauth2 handler for given provider
 func initOauth2Handler(p Params, service Oauth2Handler) Oauth2Handler {
 	if p.L == nil {
-		p.L = logger.NoOp
+		p.L = logger.NoOp{}
 	}
 	p.Logf("[INFO] init oauth2 service %s", service.name)
 	service.Params = p
@@ -85,7 +85,7 @@ func (p Oauth2Handler) Name() string { return p.name }
 // LoginHandler - GET /login?from=redirect-back-url&[site|aud]=siteID&session=1&noava=1
 func (p Oauth2Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
-	p.Logf("[DEBUG] login with %s", p.Name())
+	p.Debug("[DEBUG] login with %s", p.Name())
 	// make state (random) and store in session
 	state, err := randToken()
 	if err != nil {
@@ -130,7 +130,7 @@ func (p Oauth2Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// return login url
 	loginURL := p.conf.AuthCodeURL(state)
-	p.Logf("[DEBUG] login url %s, claims=%+v", loginURL, claims)
+	p.Debug("[DEBUG] login url %s, claims=%+v", loginURL, claims)
 
 	http.Redirect(w, r, loginURL, http.StatusFound)
 }
@@ -157,7 +157,7 @@ func (p Oauth2Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 
 	p.conf.RedirectURL = p.makeRedirURL(r.URL.Path)
 
-	p.Logf("[DEBUG] token with state %s", retrievedState)
+	p.Debug("[DEBUG] token with state %s", retrievedState)
 	tok, err := p.conf.Exchange(context.Background(), r.URL.Query().Get("code"))
 	if err != nil {
 		rest.SendErrorJSON(w, r, p.L, http.StatusInternalServerError, err, "exchange failed")
@@ -173,7 +173,7 @@ func (p Oauth2Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if e := uinfo.Body.Close(); e != nil {
-			p.Logf("[WARN] failed to close response body, %s", e)
+			p.Warn("[WARN] failed to close response body, %s", e)
 		}
 	}()
 
@@ -188,7 +188,7 @@ func (p Oauth2Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		rest.SendErrorJSON(w, r, p.L, http.StatusInternalServerError, err, "failed to unmarshal user info")
 		return
 	}
-	p.Logf("[DEBUG] got raw user info %+v", jData)
+	p.Debug("[DEBUG] got raw user info %+v", jData)
 
 	u := p.mapUser(jData, data)
 	if oauthClaims.NoAva {
@@ -222,11 +222,11 @@ func (p Oauth2Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if p.bearerTokenHook != nil && tok != nil {
-		p.Logf("[DEBUG] pass bearer token %s, %s", p.Name(), tok.TokenType)
+		p.Debug("[DEBUG] pass bearer token %s, %s", p.Name(), tok.TokenType)
 		p.bearerTokenHook(p.Name(), u, *tok)
 	}
 
-	p.Logf("[DEBUG] user info %+v", u)
+	p.Debug("[DEBUG] user info %+v", u)
 
 	// redirect to back url if presented in login query params
 	if oauthClaims.Handshake != nil && oauthClaims.Handshake.From != "" {

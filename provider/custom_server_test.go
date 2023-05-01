@@ -40,12 +40,12 @@ func TestCustomProvider(t *testing.T) {
 		Issuer:  "test-issuer",
 		Cid:     "cid",
 		Csecret: "csecret",
-		L:       logger.Std,
+		L:       logger.Std{},
 	}
 
 	sopts := CustomServerOpt{
 		URL:           "http://127.0.0.1:9096",
-		L:             logger.Std,
+		L:             logger.Std{},
 		WithLoginPage: true,
 		LoginPageHandler: func(w http.ResponseWriter, r *http.Request) {
 			// // Simulate POST from login page
@@ -149,7 +149,7 @@ func TestCustomProviderCancel(t *testing.T) {
 	prov := CustomServer{
 		OauthServer:   srv,
 		URL:           "http://127.0.0.1:9096",
-		L:             logger.Std,
+		L:             logger.Std{},
 		WithLoginPage: true,
 	}
 

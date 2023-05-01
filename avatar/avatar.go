@@ -47,7 +47,7 @@ func (p *Proxy) Put(u token.User, client *http.Client) (avatarURL string, err er
 			return "", e
 		}
 
-		p.Logf("[DEBUG] saved identicon avatar to %s, user %q", avatarID, u.Name)
+		p.Debug("[DEBUG] saved identicon avatar to %s, user %q", avatarID, u.Name)
 		return p.URL + p.RoutePath + "/" + avatarID, nil
 	}
 
@@ -58,13 +58,13 @@ func (p *Proxy) Put(u token.User, client *http.Client) (avatarURL string, err er
 
 	body, err := p.load(u.Picture, client)
 	if err != nil {
-		p.Logf("[DEBUG] failed to fetch avatar from the orig %s, %v", u.Picture, err)
+		p.Debug("[DEBUG] failed to fetch avatar from the orig %s, %v", u.Picture, err)
 		return genIdenticon(u.ID)
 	}
 
 	defer func() {
 		if e := body.Close(); e != nil {
-			p.Logf("[WARN] can't close response body, %s", e)
+			p.Warn("[WARN] can't close response body, %s", e)
 		}
 	}()
 
@@ -73,7 +73,7 @@ func (p *Proxy) Put(u token.User, client *http.Client) (avatarURL string, err er
 		return "", err
 	}
 
-	p.Logf("[DEBUG] saved avatar from %s to %s, user %q", u.Picture, avatarID, u.Name)
+	p.Debug("[DEBUG] saved avatar from %s to %s, user %q", u.Picture, avatarID, u.Name)
 	return p.URL + p.RoutePath + "/" + avatarID, nil
 }
 
@@ -132,7 +132,7 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if e := avReader.Close(); e != nil {
-			p.Logf("[WARN] can't close avatar reader for %s, %s", avatarID, e)
+			p.Warn("[WARN] can't close avatar reader for %s, %s", avatarID, e)
 		}
 	}()
 
@@ -140,7 +140,7 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Length", strconv.Itoa(size))
 	w.WriteHeader(http.StatusOK)
 	if _, err = io.Copy(w, avReader); err != nil {
-		p.Logf("[WARN] can't send response to %s, %s", r.RemoteAddr, err)
+		p.Warn("[WARN] can't send response to %s, %s", r.RemoteAddr, err)
 	}
 }
 
@@ -149,11 +149,11 @@ func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 // Returns original reader if resizing is not needed or failed.
 func (p *Proxy) resize(reader io.Reader, limit int) io.Reader {
 	if reader == nil {
-		p.Logf("[WARN] avatar resize(): reader is nil")
+		p.Warn("[WARN] avatar resize(): reader is nil")
 		return nil
 	}
 	if limit <= 0 {
-		p.Logf("[DEBUG] avatar resize(): limit should be greater than 0")
+		p.Debug("[DEBUG] avatar resize(): limit should be greater than 0")
 		return reader
 	}
 
@@ -161,14 +161,14 @@ func (p *Proxy) resize(reader io.Reader, limit int) io.Reader {
 	tee := io.TeeReader(reader, &teeBuf)
 	src, _, err := image.Decode(tee)
 	if err != nil {
-		p.Logf("[WARN] avatar resize(): can't decode avatar image, %s", err)
+		p.Warn("[WARN] avatar resize(): can't decode avatar image, %s", err)
 		return &teeBuf
 	}
 
 	bounds := src.Bounds()
 	w, h := bounds.Dx(), bounds.Dy()
 	if w <= limit && h <= limit || w <= 0 || h <= 0 {
-		p.Logf("[DEBUG] resizing image is smaller that the limit or has 0 size")
+		p.Debug("[DEBUG] resizing image is smaller that the limit or has 0 size")
 		return &teeBuf
 	}
 	newW, newH := w*limit/h, limit
@@ -181,7 +181,7 @@ func (p *Proxy) resize(reader io.Reader, limit int) io.Reader {
 
 	var out bytes.Buffer
 	if err = png.Encode(&out, m); err != nil {
-		p.Logf("[WARN] avatar resize(): can't encode resized avatar to PNG, %s", err)
+		p.Warn("[WARN] avatar resize(): can't encode resized avatar to PNG, %s", err)
 		return &teeBuf
 	}
 	return &out

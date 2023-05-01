@@ -24,7 +24,6 @@ var (
 )
 
 func TestVerifyHandler_LoginSendConfirm(t *testing.T) {
-
 	emailer := mockSender{}
 	e := VerifyHandler{
 		ProviderName: "test",
@@ -34,7 +33,7 @@ func TestVerifyHandler_LoginSendConfirm(t *testing.T) {
 			CookieDuration: time.Hour * 24 * 31,
 		}),
 		Issuer:   "iss-test",
-		L:        logger.Std,
+		L:        logger.Std{},
 		Sender:   SenderFunc(emailer.Send),
 		Template: "{{.User}} {{.Address}} {{.Site}} token:{{.Token}}",
 	}
@@ -60,7 +59,6 @@ func TestVerifyHandler_LoginSendConfirm(t *testing.T) {
 }
 
 func TestVerifyHandler_LoginSendConfirmRejected(t *testing.T) {
-
 	emailer := mockSender{}
 	e := VerifyHandler{
 		ProviderName: "test",
@@ -70,7 +68,7 @@ func TestVerifyHandler_LoginSendConfirmRejected(t *testing.T) {
 			CookieDuration: time.Hour * 24 * 31,
 		}),
 		Issuer:   "iss-test",
-		L:        logger.Std,
+		L:        logger.Std{},
 		Sender:   SenderFunc(emailer.Send),
 		Template: "{{.User}} {{.Address}} {{.Site}} token:{{.Token}}",
 	}
@@ -105,7 +103,7 @@ func TestVerifyHandler_LoginAcceptConfirm(t *testing.T) {
 			CookieDuration: time.Hour * 24 * 31,
 		}),
 		Issuer: "iss-test",
-		L:      logger.Std,
+		L:      logger.Std{},
 	}
 
 	handler := http.HandlerFunc(e.LoginHandler)
@@ -139,7 +137,7 @@ func TestVerifyHandler_LoginAcceptConfirmWithAvatar(t *testing.T) {
 			CookieDuration: time.Hour * 24 * 31,
 		}),
 		Issuer: "iss-test",
-		L:      logger.Std,
+		L:      logger.Std{},
 	}
 
 	handler := http.HandlerFunc(e.LoginHandler)
@@ -161,7 +159,7 @@ func TestVerifyHandler_LoginAcceptConfirmWithGrAvatarDisabled(t *testing.T) {
 			CookieDuration: time.Hour * 24 * 31,
 		}),
 		Issuer: "iss-test",
-		L:      logger.Std,
+		L:      logger.Std{},
 	}
 
 	handler := http.HandlerFunc(e.LoginHandler)
@@ -184,7 +182,7 @@ func TestVerifyHandler_LoginHandlerFailed(t *testing.T) {
 			CookieDuration: time.Hour * 24 * 31,
 		}),
 		Issuer: "iss-test",
-		L:      logger.Std,
+		L:      logger.Std{},
 	}
 
 	handler := http.HandlerFunc(d.LoginHandler)
@@ -247,7 +245,7 @@ func TestVerifyHandler_LoginHandlerAvatarFailed(t *testing.T) {
 			CookieDuration: time.Hour * 24 * 31,
 		}),
 		Issuer:      "iss-test",
-		L:           logger.Std,
+		L:           logger.Std{},
 		AvatarSaver: mockAvatarSaverVerif{err: fmt.Errorf("avatar save error")},
 	}
 
@@ -279,7 +277,7 @@ func TestVerifyHandler_Logout(t *testing.T) {
 			CookieDuration: time.Hour * 24 * 31,
 		}),
 		Issuer: "iss-test",
-		L:      logger.Std,
+		L:      logger.Std{},
 	}
 
 	handler := http.HandlerFunc(d.LogoutHandler)

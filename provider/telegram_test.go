@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/go-pkgz/auth/logger"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -229,7 +230,7 @@ func TestTelegram_ProcessUpdateFlow(t *testing.T) {
 		ErrorMsg:     "error",
 		SuccessMsg:   "success",
 
-		L: t,
+		L: logger.Std{},
 		TokenService: authtoken.NewService(authtoken.Opts{
 			SecretReader:   authtoken.SecretFunc(func(string) (string, error) { return "secret", nil }),
 			TokenDuration:  time.Hour,
@@ -362,7 +363,7 @@ func setupHandler(t *testing.T, m TelegramAPI) (tg *TelegramHandler, cleanup fun
 		ErrorMsg:     "error",
 		SuccessMsg:   "success",
 
-		L: t,
+		L: logger.Std{},
 		TokenService: authtoken.NewService(authtoken.Opts{
 			SecretReader:   authtoken.SecretFunc(func(string) (string, error) { return "secret", nil }),
 			TokenDuration:  time.Hour,

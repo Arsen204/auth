@@ -73,18 +73,18 @@ type CustomServer struct {
 
 // Run starts serving on port from c.URL
 func (c *CustomServer) Run(ctx context.Context) {
-	c.Logf("[INFO] run local go-oauth2/oauth2 server on %s", c.URL)
+	c.Info("[INFO] run local go-oauth2/oauth2 server on %s", c.URL)
 	c.lock.Lock()
 
 	u, err := url.Parse(c.URL)
 	if err != nil {
-		c.Logf("[ERROR] failed to parse service base URL=%s", c.URL)
+		c.Error("[ERROR] failed to parse service base URL=%s", c.URL)
 		return
 	}
 
 	_, port, err := net.SplitHostPort(u.Host)
 	if err != nil {
-		c.Logf("[ERROR] failed to get port from URL=%s", c.URL)
+		c.Error("[ERROR] failed to get port from URL=%s", c.URL)
 		return
 	}
 
@@ -113,12 +113,12 @@ func (c *CustomServer) Run(ctx context.Context) {
 
 	go func() {
 		<-ctx.Done()
-		c.Logf("[DEBUG] cancellation via context, %v", ctx.Err())
+		c.Debug("[DEBUG] cancellation via context, %v", ctx.Err())
 		c.Shutdown()
 	}()
 
 	err = c.httpServer.ListenAndServe()
-	c.Logf("[WARN] go-oauth2/oauth2 server terminated, %s", err)
+	c.Warn("[WARN] go-oauth2/oauth2 server terminated, %s", err)
 }
 
 func (c *CustomServer) handleAuthorize(w http.ResponseWriter, r *http.Request) {
@@ -132,14 +132,14 @@ func (c *CustomServer) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 			}
 			userLoginTmpl, err := template.New("page").Parse(defaultLoginTmpl)
 			if err != nil {
-				c.Logf("[ERROR] can't parse user login template, %s", err)
+				c.Error("[ERROR] can't parse user login template, %s", err)
 				return
 			}
 
 			formData := struct{ Query template.URL }{Query: template.URL(r.URL.RawQuery)} //nolint:gosec // query is safe
 
 			if err := userLoginTmpl.Execute(w, formData); err != nil {
-				c.Logf("[WARN] can't write, %s", err)
+				c.Warn("[WARN] can't write, %s", err)
 			}
 			return
 		}
@@ -190,16 +190,16 @@ func (c *CustomServer) handleAvatar(w http.ResponseWriter, r *http.Request) {
 
 // Shutdown go-oauth2/oauth2 server
 func (c *CustomServer) Shutdown() {
-	c.Logf("[WARN] shutdown go-oauth2/oauth2 server")
+	c.Warn("[WARN] shutdown go-oauth2/oauth2 server")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	c.lock.Lock()
 	if c.httpServer != nil {
 		if err := c.httpServer.Shutdown(ctx); err != nil {
-			c.Logf("[DEBUG] go-oauth2/oauth2 shutdown error, %s", err)
+			c.Debug("[DEBUG] go-oauth2/oauth2 shutdown error, %s", err)
 		}
 	}
-	c.Logf("[DEBUG] shutdown go-oauth2/oauth2 server completed")
+	c.Debug("[DEBUG] shutdown go-oauth2/oauth2 server completed")
 	c.lock.Unlock()
 }
 

@@ -31,7 +31,6 @@ import (
 type customLoader struct{} // implement custom private key loader interface
 
 func TestAppleHandler_NewApple(t *testing.T) {
-
 	testIDToken := `eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJ0ZXN0LmF1dGguZXhhbXBsZS5jb20iLCJzdWIiOiIwMDExMjIuNzg5M2Y3NmViZWRjNDExOGE3OTE3ZGFiOWE4YTllYTkuMTEyMiIsImlzcyI6Imh0dHBzOi8vYXBwbGVpZC5hcHBsZS5jb20iLCJleHAiOiIxOTIwNjQ3MTgyIiwiaWF0IjoiMTYyMDYzNzE4MiIsImVtYWlsIjoidGVzdEBlbWFpbC5jb20ifQ.CQCPa7ov-IdZ5bEKfhhnxEXafMAM_t6mj5OAnaoyy0A` // #nosec
 	p := Params{
 		URL:     "http://localhost",
@@ -178,8 +177,7 @@ func TestAppleHandlerCreateClientSecret(t *testing.T) {
 }
 
 func TestAppleParseUserData(t *testing.T) {
-
-	ah := AppleHandler{Params: Params{L: logger.NoOp}}
+	ah := AppleHandler{Params: Params{L: logger.NoOp{}}}
 
 	userNameClaimTest := `{"name":{"firstName":"test","lastName":"user"}}`
 	testUser := &token.User{ID: "", Email: "user@example.com"}
@@ -483,7 +481,7 @@ func prepareAppleOauthTest(t *testing.T, loginPort, authPort int, testToken *str
 	})
 
 	params := Params{URL: "url", Cid: "cid", Csecret: "csecret", JwtService: jwtService,
-		Issuer: "go-pkgz/auth", L: logger.Std}
+		Issuer: "go-pkgz/auth", L: logger.Std{}}
 	provider.Params = params
 
 	svc := Service{Provider: provider}

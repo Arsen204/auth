@@ -30,7 +30,7 @@ func (h Oauth1Handler) Name() string { return h.name }
 
 // LoginHandler - GET /login?from=redirect-back-url&site=siteID&session=1
 func (h Oauth1Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	h.Logf("[DEBUG] login with %s", h.Name())
+	h.Debug("[DEBUG] login with %s", h.Name())
 
 	// setting RedirectURL to {rootURL}/{routingPath}/{provider}/callback
 	// e.g. http://localhost:8080/auth/twitter/callback
@@ -109,7 +109,7 @@ func (h Oauth1Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if e := uinfo.Body.Close(); e != nil {
-			h.Logf("[WARN] failed to close response body, %s", e)
+			h.Warn("[WARN] failed to close response body, %s", e)
 		}
 	}()
 
@@ -124,7 +124,7 @@ func (h Oauth1Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		rest.SendErrorJSON(w, r, h.L, http.StatusInternalServerError, err, "failed to unmarshal user info")
 		return
 	}
-	h.Logf("[DEBUG] got raw user info %+v", jData)
+	h.Debug("[DEBUG] got raw user info %+v", jData)
 
 	u := h.mapUser(jData, data)
 	u, err = setAvatar(h.AvatarSaver, u, &http.Client{Timeout: 5 * time.Second})
@@ -153,7 +153,7 @@ func (h Oauth1Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.Logf("[DEBUG] user info %+v", u)
+	h.Debug("[DEBUG] user info %+v", u)
 
 	// redirect to back url if presented in login query params
 	if oauthClaims.Handshake != nil && oauthClaims.Handshake.From != "" {
@@ -182,14 +182,14 @@ func (h Oauth1Handler) makeRedirURL(path string) string {
 // initOauth2Handler makes oauth1 handler for given provider
 func initOauth1Handler(p Params, service Oauth1Handler) Oauth1Handler {
 	if p.L == nil {
-		p.L = logger.NoOp
+		p.L = logger.NoOp{}
 	}
-	p.Logf("[INFO] init oauth1 service %s", service.name)
+	p.Info("[INFO] init oauth1 service %s", service.name)
 	service.Params = p
 	service.conf.ConsumerKey = p.Cid
 	service.conf.ConsumerSecret = p.Csecret
 
-	p.Logf("[DEBUG] created %s oauth2, id=%s, redir=%s, endpoint=%s",
+	p.Debug("[DEBUG] created %s oauth2, id=%s, redir=%s, endpoint=%s",
 		service.name, service.Cid, service.makeRedirURL("/{route}/"+service.name+"/"), service.conf.Endpoint)
 	return service
 }

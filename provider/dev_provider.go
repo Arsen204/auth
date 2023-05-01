@@ -46,13 +46,13 @@ func (d *DevAuthServer) Run(ctx context.Context) { // nolint (gocyclo)
 	}
 
 	d.username = "dev_user"
-	d.Logf("[INFO] run local oauth2 dev server on %d, redirect url=%s", d.Provider.Port, d.Provider.conf.RedirectURL)
+	d.Info("[INFO] run local oauth2 dev server on %d, redirect url=%s", d.Provider.Port, d.Provider.conf.RedirectURL)
 	d.lock.Lock()
 	var err error
 
 	userFormTmpl, err := template.New("page").Parse(devUserFormTmpl)
 	if err != nil {
-		d.Logf("[WARN] can't parse user form template, %s", err)
+		d.Warn("[WARN] can't parse user form template, %s", err)
 		return
 	}
 
@@ -60,7 +60,7 @@ func (d *DevAuthServer) Run(ctx context.Context) { // nolint (gocyclo)
 		Addr:              fmt.Sprintf(":%d", d.Provider.Port),
 		ReadHeaderTimeout: 5 * time.Second,
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			d.Logf("[DEBUG] dev oauth request %s %s %+v", r.Method, r.URL, r.Header)
+			d.Debug("[DEBUG] dev oauth request %s %s %+v", r.Method, r.URL, r.Header)
 			switch {
 
 			case strings.HasPrefix(r.URL.Path, "/login/oauth/authorize"):
@@ -69,7 +69,7 @@ func (d *DevAuthServer) Run(ctx context.Context) { // nolint (gocyclo)
 				if !d.Automatic && (r.ParseForm() != nil || r.Form.Get("username") == "") {
 					formData := struct{ Query template.URL }{Query: template.URL(r.URL.RawQuery)} //nolint:gosec // query is safe
 					if err = userFormTmpl.Execute(w, formData); err != nil {
-						d.Logf("[WARN] can't write, %s", err)
+						d.Warn("[WARN] can't write, %s", err)
 					}
 					return
 				}
@@ -80,7 +80,7 @@ func (d *DevAuthServer) Run(ctx context.Context) { // nolint (gocyclo)
 
 				state := r.URL.Query().Get("state")
 				callbackURL := fmt.Sprintf("%s?code=g0ZGZmNjVmOWI&state=%s", d.Provider.conf.RedirectURL, state)
-				d.Logf("[DEBUG] callback url=%s", callbackURL)
+				d.Debug("[DEBUG] callback url=%s", callbackURL)
 				w.Header().Add("Location", callbackURL)
 				w.WriteHeader(http.StatusFound)
 
@@ -144,26 +144,26 @@ func (d *DevAuthServer) Run(ctx context.Context) { // nolint (gocyclo)
 
 	go func() {
 		<-ctx.Done()
-		d.Logf("[DEBUG] cancellation via context, %v", ctx.Err())
+		d.Debug("[DEBUG] cancellation via context, %v", ctx.Err())
 		d.Shutdown()
 	}()
 
 	err = d.httpServer.ListenAndServe()
-	d.Logf("[WARN] dev oauth2 server terminated, %s", err)
+	d.Warn("[WARN] dev oauth2 server terminated, %s", err)
 }
 
 // Shutdown oauth2 dev server
 func (d *DevAuthServer) Shutdown() {
-	d.Logf("[WARN] shutdown oauth2 dev server")
+	d.Warn("[WARN] shutdown oauth2 dev server")
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	d.lock.Lock()
 	if d.httpServer != nil {
 		if err := d.httpServer.Shutdown(ctx); err != nil {
-			d.Logf("[DEBUG] oauth2 dev shutdown error, %s", err)
+			d.Debug("[DEBUG] oauth2 dev shutdown error, %s", err)
 		}
 	}
-	d.Logf("[DEBUG] shutdown dev oauth2 server completed")
+	d.Debug("[DEBUG] shutdown dev oauth2 server completed")
 	d.lock.Unlock()
 }
 

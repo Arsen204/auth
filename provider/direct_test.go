@@ -72,7 +72,7 @@ func TestDirect_LoginHandler(t *testing.T) {
 					CookieDuration: time.Hour * 24 * 31,
 				}),
 				Issuer: "iss-test",
-				L:      logger.Std,
+				L:      logger.Std{},
 			}
 
 			assert.Equal(t, "test", d.Name())
@@ -108,7 +108,7 @@ func TestDirect_LoginHandlerCustomUserID(t *testing.T) {
 			CookieDuration: time.Hour * 24 * 31,
 		}),
 		Issuer: "iss-test",
-		L:      logger.Std,
+		L:      logger.Std{},
 		UserIDFunc: func(user string, r *http.Request) string {
 			return user + "_custom_id"
 		},
@@ -198,7 +198,7 @@ func TestDirect_LoginHandlerFailed(t *testing.T) {
 					CookieDuration: time.Hour * 24 * 31,
 				}),
 				Issuer: "iss-test",
-				L:      logger.Std,
+				L:      logger.Std{},
 			}
 
 			handler := http.HandlerFunc(d.LoginHandler)
@@ -221,7 +221,7 @@ func TestDirect_Logout(t *testing.T) {
 			CookieDuration: time.Hour * 24 * 31,
 		}),
 		Issuer: "iss-test",
-		L:      logger.Std,
+		L:      logger.Std{},
 	}
 
 	handler := http.HandlerFunc(d.LogoutHandler)

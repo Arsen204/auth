@@ -72,7 +72,7 @@ func (a *Authenticator) auth(reqAuth bool) func(http.Handler) http.Handler {
 			h.ServeHTTP(w, r)
 			return
 		}
-		a.Logf("[DEBUG] auth failed, %v", err)
+		a.Debug("[DEBUG] auth failed, %v", err)
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 	}
 
@@ -167,7 +167,7 @@ func (a *Authenticator) refreshExpiredToken(w http.ResponseWriter, claims token.
 		a.RefreshCache.Set(tkn, c)
 	}
 
-	a.Logf("[DEBUG] token refreshed for %+v", claims.User)
+	a.Debug("[DEBUG] token refreshed for %+v", claims.User)
 	return c, nil
 }
 
@@ -204,7 +204,7 @@ func (a *Authenticator) basicAdminUser(r *http.Request) bool {
 
 	// using ConstantTimeCompare to avoid timing attack
 	if user != "admin" || subtle.ConstantTimeCompare([]byte(passwd), []byte(a.AdminPasswd)) != 1 {
-		a.Logf("[WARN] admin basic auth failed, user/passwd mismatch, %s:%s", user, passwd)
+		a.Warn("[WARN] admin basic auth failed, user/passwd mismatch, %s:%s", user, passwd)
 		return false
 	}
 

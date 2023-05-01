@@ -222,7 +222,7 @@ func prepOauth1Test(t *testing.T, loginPort, authPort int) func() { //nolint
 	})
 
 	params := Params{URL: "url", Cid: "aFdj12348sdja", Csecret: "Dwehsq2387akss", JwtService: jwtService,
-		Issuer: "remark42", AvatarSaver: &mockAvatarSaver{}, L: logger.Std}
+		Issuer: "remark42", AvatarSaver: &mockAvatarSaver{}, L: logger.Std{}}
 
 	provider = initOauth1Handler(params, provider)
 	svc := Service{Provider: provider}

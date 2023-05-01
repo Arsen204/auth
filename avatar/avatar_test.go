@@ -36,7 +36,7 @@ func TestAvatar_Put(t *testing.T) {
 		ts.Close()
 	}()
 
-	p := Proxy{RoutePath: "/avatar", URL: "http://localhost:8080", Store: NewLocalFS("/tmp/avatars.test"), L: logger.NoOp}
+	p := Proxy{RoutePath: "/avatar", URL: "http://localhost:8080", Store: NewLocalFS("/tmp/avatars.test"), L: logger.NoOp{}}
 	assert.NoError(t, os.MkdirAll("/tmp/avatars.test", 0o700))
 	defer os.RemoveAll("/tmp/avatars.test")
 
@@ -67,7 +67,7 @@ func TestAvatar_PutIdenticon(t *testing.T) {
 		_ = os.RemoveAll("/tmp/avatars.test/")
 		ts.Close()
 	}()
-	p := Proxy{RoutePath: "/avatar", URL: "http://localhost:8080", Store: NewLocalFS("/tmp/avatars.test"), L: logger.Std}
+	p := Proxy{RoutePath: "/avatar", URL: "http://localhost:8080", Store: NewLocalFS("/tmp/avatars.test"), L: logger.Std{}}
 	client := &http.Client{Timeout: time.Second}
 
 	u := token.User{ID: "user1", Name: "user1 name"}
@@ -91,7 +91,7 @@ func TestAvatar_PutFailed(t *testing.T) {
 		ts.Close()
 	}()
 
-	p := Proxy{RoutePath: "/avatar", URL: "http://localhost:8080", Store: NewLocalFS("/tmp/avatars.test"), L: logger.Std}
+	p := Proxy{RoutePath: "/avatar", URL: "http://localhost:8080", Store: NewLocalFS("/tmp/avatars.test"), L: logger.Std{}}
 	client := &http.Client{Timeout: time.Second}
 
 	u := token.User{ID: "user2", Name: "user2 name", Picture: "http://127.0.0.1:22345/avater/pic"}
@@ -117,7 +117,7 @@ func TestAvatar_Routes(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	p := Proxy{RoutePath: "/avatar", Store: NewLocalFS("/tmp/avatars.test"), L: logger.Std}
+	p := Proxy{RoutePath: "/avatar", Store: NewLocalFS("/tmp/avatars.test"), L: logger.Std{}}
 	assert.NoError(t, os.MkdirAll("/tmp/avatars.test", 0o700))
 	defer os.RemoveAll("/tmp/avatars.test")
 	client := &http.Client{Timeout: time.Second}
@@ -190,7 +190,7 @@ func TestAvatar_resize(t *testing.T) {
 		assert.Equal(t, cExp, content)
 	}
 
-	p := Proxy{L: logger.Std}
+	p := Proxy{L: logger.Std{}}
 	// Reader is nil.
 	resizedR := p.resize(nil, 100)
 	assert.Nil(t, resizedR)

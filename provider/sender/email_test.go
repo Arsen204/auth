@@ -21,7 +21,7 @@ func TestEmailSend(t *testing.T) {
 		Port:        25,
 		Subject:     "test email",
 	}
-	client := NewEmailClient(p, logger.Std)
+	client := NewEmailClient(p, logger.Std{})
 
 	msg := `
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
@@ -49,21 +49,21 @@ func TestEmail_New(t *testing.T) {
 		StartTLS:     true,
 		TLS:          true,
 	}
-	e := NewEmailClient(p, logger.Std)
+	e := NewEmailClient(p, logger.Std{})
 	assert.Equal(t, p, e.EmailParams)
 }
 
 func TestEmail_SendFailed(t *testing.T) {
 	p := EmailParams{Host: "127.0.0.2", Port: 25, From: "from@example.com",
 		Subject: "subj", ContentType: "text/html", TimeOut: time.Millisecond * 200}
-	e := NewEmailClient(p, logger.Std)
+	e := NewEmailClient(p, logger.Std{})
 	assert.Equal(t, p, e.EmailParams)
 	err := e.Send("to@example.com", "some text")
 	require.NotNil(t, err, "failed to make smtp client")
 
 	p = EmailParams{Host: "127.0.0.1", Port: 225, From: "from@example.com", Subject: "subj", ContentType: "text/html",
 		TLS: true}
-	e = NewEmailClient(p, logger.Std)
+	e = NewEmailClient(p, logger.Std{})
 	err = e.Send("to@example.com", "some text")
 	require.NotNil(t, err)
 }

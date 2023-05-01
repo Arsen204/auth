@@ -297,7 +297,7 @@ func prepOauth2Test(t *testing.T, loginPort, authPort int, btHook BearerTokenHoo
 	})
 
 	params := Params{URL: "url", Cid: "cid", Csecret: "csecret", JwtService: jwtService,
-		Issuer: "remark42", AvatarSaver: &mockAvatarSaver{}, L: logger.Std}
+		Issuer: "remark42", AvatarSaver: &mockAvatarSaver{}, L: logger.Std{}}
 
 	provider = initOauth2Handler(params, provider)
 	svc := Service{Provider: provider}

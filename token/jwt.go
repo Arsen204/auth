@@ -233,6 +233,7 @@ func (j *Service) Set(w http.ResponseWriter, claims Claims) (Claims, error) {
 
 	if j.SendJWTHeader {
 		w.Header().Set(j.JWTHeaderKey, tokenString)
+		w.Header().Set(j.XSRFHeaderKey, claims.Id)
 		return claims, nil
 	}
 
@@ -298,7 +299,22 @@ func (j *Service) Get(r *http.Request) (Claims, string, error) {
 	}
 
 	if fromCookie && claims.User != nil {
-		xsrf := r.Header.Get(j.XSRFHeaderKey)
+		xsrf := ""
+
+		// try to get from XSRF header
+		if xsrfHeader := r.Header.Get(j.XSRFHeaderKey); xsrfHeader != "" {
+			xsrf = xsrfHeader
+		}
+
+		// try to get from XSRF cookie
+		if xsrf == "" {
+			jc, err := r.Cookie(j.XSRFCookieName)
+			if err != nil {
+				return Claims{}, "", fmt.Errorf("xsrf cookie was not presented: %w", err)
+			}
+			xsrf = jc.Value
+		}
+
 		if claims.Id != xsrf {
 			return Claims{}, "", fmt.Errorf("xsrf mismatch")
 		}

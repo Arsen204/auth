@@ -31,7 +31,7 @@ type VerifyHandler struct {
 	PasswordExtract bool
 	UserSaver       func(token.User) error
 	Sender          Sender
-	Template        string
+	Template        *template.Template
 	UseGravatar     bool
 }
 
@@ -227,16 +227,6 @@ func (e VerifyHandler) sendConfirmation(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	tmpl := msgTemplate
-	if e.Template != "" {
-		tmpl = e.Template
-	}
-	emailTmpl, err := template.New("confirm").Parse(tmpl)
-	if err != nil {
-		rest.SendErrorJSON(w, r, e.L, http.StatusInternalServerError, err, "can't parse confirmation template")
-		return
-	}
-
 	tmplData := struct {
 		User    string
 		Address string
@@ -249,7 +239,7 @@ func (e VerifyHandler) sendConfirmation(w http.ResponseWriter, r *http.Request) 
 		Site:    r.URL.Query().Get("site"),
 	}
 	buf := bytes.Buffer{}
-	if err = emailTmpl.Execute(&buf, tmplData); err != nil {
+	if err = e.Template.Execute(&buf, tmplData); err != nil {
 		rest.SendErrorJSON(w, r, e.L, http.StatusInternalServerError, err, "can't execute confirmation template")
 		return
 	}
@@ -269,12 +259,6 @@ func (e VerifyHandler) AuthHandler(http.ResponseWriter, *http.Request) {}
 func (e VerifyHandler) LogoutHandler(w http.ResponseWriter, _ *http.Request) {
 	e.TokenService.Reset(w)
 }
-
-var msgTemplate = `
-Confirmation for {{.User}} {{.Address}}, site {{.Site}}
-
-Token: {{.Token}}
-`
 
 func (e VerifyHandler) sanitize(inp string) string {
 	p := bluemonday.UGCPolicy()

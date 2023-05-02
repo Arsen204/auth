@@ -26,6 +26,7 @@ type VerifyHandler struct {
 	TokenService VerifTokenService
 	Issuer       string
 	AvatarSaver  AvatarSaver
+	UserSaver    func(token.User) error
 	Sender       Sender
 	Template     string
 	UseGravatar  bool
@@ -59,7 +60,6 @@ func (e VerifyHandler) Name() string { return e.ProviderName }
 // LoginHandler gets name and address from query, makes confirmation token and sends it to user.
 // In case if confirmation token presented in the query uses it to create auth token
 func (e VerifyHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
-
 	// GET /login?site=site&user=name&address=someone@example.com
 	tkn := r.URL.Query().Get("token")
 	if tkn == "" { // no token, ask confirmation via email
@@ -102,6 +102,14 @@ func (e VerifyHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if u, err = setAvatar(e.AvatarSaver, u, &http.Client{Timeout: 5 * time.Second}); err != nil {
 		rest.SendErrorJSON(w, r, e.L, http.StatusInternalServerError, err, "failed to save avatar to proxy")
 		return
+	}
+
+	if e.UserSaver != nil {
+		err = e.UserSaver(u)
+		if err != nil {
+			rest.SendErrorJSON(w, r, e.L, http.StatusInternalServerError, err, "failed to save user")
+			return
+		}
 	}
 
 	cid, err := randToken()

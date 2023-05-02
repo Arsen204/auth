@@ -39,6 +39,7 @@ type Params struct {
 	Cid         string
 	Csecret     string
 	Issuer      string
+	UserSaver   func(token.User) error
 	AvatarSaver AvatarSaver
 
 	Port int    // relevant for providers supporting port customization, for example dev oauth2
@@ -84,7 +85,6 @@ func (p Oauth2Handler) Name() string { return p.name }
 
 // LoginHandler - GET /login?from=redirect-back-url&[site|aud]=siteID&session=1&noava=1
 func (p Oauth2Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
-
 	p.Debug("[DEBUG] login with %s", p.Name())
 	// make state (random) and store in session
 	state, err := randToken()
@@ -198,6 +198,14 @@ func (p Oauth2Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		rest.SendErrorJSON(w, r, p.L, http.StatusInternalServerError, err, "failed to save avatar to proxy")
 		return
+	}
+
+	if p.UserSaver != nil {
+		err = p.UserSaver(u)
+		if err != nil {
+			rest.SendErrorJSON(w, r, p.L, http.StatusInternalServerError, err, "failed to save user")
+			return
+		}
 	}
 
 	cid, err := randToken()

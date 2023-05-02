@@ -133,6 +133,14 @@ func (h Oauth1Handler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if h.UserSaver != nil {
+		err = h.UserSaver(u)
+		if err != nil {
+			rest.SendErrorJSON(w, r, h.L, http.StatusInternalServerError, err, "failed to save user")
+			return
+		}
+	}
+
 	cid, err := randToken()
 	if err != nil {
 		rest.SendErrorJSON(w, r, h.L, http.StatusInternalServerError, err, "failed to make claim's id")

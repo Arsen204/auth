@@ -82,7 +82,6 @@ func fetchAppleJWK(ctx context.Context, keyURL string) (set appleKeySet, err err
 
 // parseAppleJWK try parse keys data for return set of Apple public keys, if no errors
 func parseAppleJWK(keyData []byte) (set appleKeySet, err error) {
-
 	var rawKeys struct {
 		Keys []appleRawKey `json:"keys"`
 	}
@@ -107,7 +106,6 @@ func parseAppleJWK(keyData []byte) (set appleKeySet, err error) {
 
 // parseApplePublicKey to  make parse JWK data for create an Apple public key
 func parseApplePublicKey(rawKey appleRawKey) (key *applePublicKey, err error) {
-
 	key = &applePublicKey{
 		KeyType:   rawKey.KTY,
 		ID:        rawKey.KID,
@@ -125,7 +123,6 @@ func parseApplePublicKey(rawKey appleRawKey) (key *applePublicKey, err error) {
 
 // createApplePublicKey need to decodes a base64-encoded larger integer from Apple's key format.
 func (apk *applePublicKey) createApplePublicKey(n, e string) error {
-
 	bufferN, err := base64.URLEncoding.WithPadding(base64.NoPadding).DecodeString(n) // decode modulus
 	if err != nil {
 		return fmt.Errorf("failed to decode Apple public key modulus (n): %w", err)
@@ -163,11 +160,11 @@ func (aks *appleKeySet) get(kid string) (keys *applePublicKey, err error) {
 
 // keyFunc use for JWT verify with specific public key
 func (aks *appleKeySet) keyFunc(token *jwt.Token) (interface{}, error) {
-
 	keyID, ok := token.Header["kid"].(string)
 	if !ok {
 		return nil, fmt.Errorf("get JWT kid header not found")
 	}
+
 	key, err := aks.get(keyID)
 
 	if err != nil {

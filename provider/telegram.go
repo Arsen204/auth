@@ -31,6 +31,7 @@ type TelegramHandler struct {
 	ErrorMsg, SuccessMsg string
 
 	TokenService TokenService
+	UserSaver    func(authtoken.User) error
 	AvatarSaver  AvatarSaver
 	Telegram     TelegramAPI
 
@@ -298,6 +299,14 @@ func (th *TelegramHandler) LoginHandler(w http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		rest.SendErrorJSON(w, r, th.L, http.StatusInternalServerError, err, "failed to save avatar to proxy")
 		return
+	}
+
+	if th.UserSaver != nil {
+		err = th.UserSaver(u)
+		if err != nil {
+			rest.SendErrorJSON(w, r, th.L, http.StatusInternalServerError, err, "failed to save user")
+			return
+		}
 	}
 
 	claims := authtoken.Claims{

@@ -240,7 +240,6 @@ func (ah *AppleHandler) Name() string { return ah.name }
 
 // LoginHandler - GET */{provider-name}/login
 func (ah *AppleHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
-
 	ah.Debug("[DEBUG] login with %s", ah.Name())
 	// make state (random) and store in session
 	state, err := randToken()
@@ -289,8 +288,7 @@ func (ah *AppleHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 // AuthHandler fills user info and redirects to "from" url. This is callback url redirected locally by browser
 // GET /callback
-func (ah AppleHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
-
+func (ah *AppleHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	// read response form data
 	if err := r.ParseForm(); err != nil {
 		rest.SendErrorJSON(w, r, ah.L, http.StatusInternalServerError, err, "read callback response from data failed")
@@ -362,6 +360,14 @@ func (ah AppleHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 	// try parse username if one exist at response or noname assign
 	ah.parseUserData(&u, jUser)
 
+	if ah.UserSaver != nil {
+		err = ah.UserSaver(u)
+		if err != nil {
+			rest.SendErrorJSON(w, r, ah.L, http.StatusInternalServerError, err, "failed to save user")
+			return
+		}
+	}
+
 	cid, err := randToken()
 	if err != nil {
 		rest.SendErrorJSON(w, r, ah.L, http.StatusInternalServerError, err, "failed to make claim's id")
@@ -395,7 +401,7 @@ func (ah AppleHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // LogoutHandler - GET /logout
-func (ah AppleHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+func (ah *AppleHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	if _, _, err := ah.JwtService.Get(r); err != nil {
 		rest.SendErrorJSON(w, r, ah.L, http.StatusForbidden, err, "logout not allowed")
 		return
@@ -406,7 +412,6 @@ func (ah AppleHandler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 // exchange sends the validation token request and gets access token and user claims
 // (e.g. https://developer.apple.com/documentation/sign_in_with_apple/generate_and_validate_tokens)
 func (ah *AppleHandler) exchange(ctx context.Context, code, redirectURI string, result *appleVerificationResponse) error {
-
 	// check client_secret for valid and recreate new (client_secret JWT) if required
 	if tkn, err := jwt.Parse(ah.conf.clientSecret, ah.tokenKeyFunc); err != nil || tkn == nil {
 		ah.conf.clientSecret, err = ah.createClientSecret()
@@ -485,7 +490,6 @@ func (ah *AppleHandler) createClientSecret() (string, error) {
 }
 
 func (ah *AppleHandler) parseUserData(user *token.User, jUser string) {
-
 	type UserData struct {
 		Name struct {
 			FirstName string `json:"firstName"`
@@ -532,7 +536,7 @@ func (ah *AppleHandler) prepareLoginURL(state, path string) (string, error) {
 
 }
 
-func (ah AppleHandler) makeRedirURL(path string) string {
+func (ah *AppleHandler) makeRedirURL(path string) string {
 	elems := strings.Split(path, "/")
 	newPath := strings.Join(elems[:len(elems)-1], "/")
 

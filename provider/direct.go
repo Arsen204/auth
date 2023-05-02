@@ -56,7 +56,9 @@ type credentials struct {
 }
 
 // Name of the handler
-func (p DirectHandler) Name() string { return p.ProviderName }
+func (p DirectHandler) Name() string {
+	return p.ProviderName
+}
 
 // LoginHandler checks "user" and "passwd" against data store and makes jwt if all passed.
 //
@@ -137,7 +139,6 @@ func (p DirectHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 // getCredentials extracts user and password from request
 func (p DirectHandler) getCredentials(w http.ResponseWriter, r *http.Request) (credentials, error) {
-
 	// GET /something?user=name&passwd=xyz&aud=bar
 	if r.Method == "GET" {
 		return credentials{

@@ -71,11 +71,12 @@ type Opts struct {
 	AudSecrets       bool                     // allow multiple secrets (secret per aud)
 	Logger           logger.L                 // logger interface, default is no logging at all
 	RefreshCache     middleware.RefreshCache  // optional cache to keep refreshed tokens
+
+	UserSaver func(token.User) error // function that saves user after successful authorization
 }
 
 // NewService initializes everything
 func NewService(opts Opts) (res *Service) {
-
 	res = &Service{
 		opts:   opts,
 		logger: opts.Logger,
@@ -147,7 +148,6 @@ func NewService(opts Opts) (res *Service) {
 
 // Handlers gets http.Handler for all providers and avatars
 func (s *Service) Handlers() (authHandler, avatarHandler http.Handler) {
-
 	ah := func(w http.ResponseWriter, r *http.Request) {
 		elems := strings.Split(r.URL.Path, "/")
 		if len(elems) < 2 {
@@ -224,12 +224,12 @@ func (s *Service) Middleware() middleware.Authenticator {
 
 // AddProvider adds provider for given name
 func (s *Service) AddProvider(name, cid, csecret string) {
-
 	p := provider.Params{
 		URL:         s.opts.URL,
 		JwtService:  s.jwtService,
 		Issuer:      s.issuer,
 		AvatarSaver: s.avatarProxy,
+		UserSaver:   s.opts.UserSaver,
 		Cid:         cid,
 		Csecret:     csecret,
 		L:           s.logger,
@@ -268,6 +268,7 @@ func (s *Service) AddDevProvider(host string, port int) {
 		JwtService:  s.jwtService,
 		Issuer:      s.issuer,
 		AvatarSaver: s.avatarProxy,
+		UserSaver:   s.opts.UserSaver,
 		L:           s.logger,
 		Port:        port,
 		Host:        host,
@@ -282,6 +283,7 @@ func (s *Service) AddAppleProvider(appleConfig provider.AppleConfig, privKeyLoad
 		JwtService:  s.jwtService,
 		Issuer:      s.issuer,
 		AvatarSaver: s.avatarProxy,
+		UserSaver:   s.opts.UserSaver,
 		L:           s.logger,
 	}
 
@@ -302,6 +304,7 @@ func (s *Service) AddCustomProvider(name string, client Client, copts provider.C
 		JwtService:  s.jwtService,
 		Issuer:      s.issuer,
 		AvatarSaver: s.avatarProxy,
+		UserSaver:   s.opts.UserSaver,
 		Cid:         client.Cid,
 		Csecret:     client.Csecret,
 		L:           s.logger,
@@ -313,10 +316,10 @@ func (s *Service) AddCustomProvider(name string, client Client, copts provider.C
 
 // AddDirectProvider adds provider with direct check against data store
 // it doesn't do any handshake and uses provided credChecker to verify user and password from the request
-func (s *Service) AddDirectProvider(name string, credChecker provider.CredChecker) {
+func (s *Service) AddDirectProvider(credChecker provider.CredChecker) {
 	dh := provider.DirectHandler{
 		L:            s.logger,
-		ProviderName: name,
+		ProviderName: "direct",
 		Issuer:       s.issuer,
 		TokenService: s.jwtService,
 		CredChecker:  credChecker,
@@ -329,10 +332,10 @@ func (s *Service) AddDirectProvider(name string, credChecker provider.CredChecke
 // AddDirectProviderWithUserIDFunc adds provider with direct check against data store and sets custom UserIDFunc allows
 // to modify user's ID on the client side.
 // it doesn't do any handshake and uses provided credChecker to verify user and password from the request
-func (s *Service) AddDirectProviderWithUserIDFunc(name string, credChecker provider.CredChecker, ufn provider.UserIDFunc) {
+func (s *Service) AddDirectProviderWithUserIDFunc(credChecker provider.CredChecker, ufn provider.UserIDFunc) {
 	dh := provider.DirectHandler{
 		L:            s.logger,
-		ProviderName: name,
+		ProviderName: "direct",
 		Issuer:       s.issuer,
 		TokenService: s.jwtService,
 		CredChecker:  credChecker,
@@ -351,6 +354,7 @@ func (s *Service) AddVerifProvider(name, msgTmpl string, sender provider.Sender)
 		Issuer:       s.issuer,
 		TokenService: s.jwtService,
 		AvatarSaver:  s.avatarProxy,
+		UserSaver:    s.opts.UserSaver,
 		Sender:       sender,
 		Template:     msgTmpl,
 		UseGravatar:  s.useGravatar,

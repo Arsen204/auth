@@ -30,6 +30,7 @@ type User struct {
 	// set by client
 	IP         string                 `json:"ip,omitempty"`
 	Email      string                 `json:"email,omitempty"`
+	Password   string                 `json:"-"`
 	Attributes map[string]interface{} `json:"attrs,omitempty"`
 	Role       string                 `json:"role,omitempty"`
 }

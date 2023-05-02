@@ -49,7 +49,6 @@ type Provider interface {
 
 // Handler returns auth routes for given provider
 func (p Service) Handler(w http.ResponseWriter, r *http.Request) {
-
 	if r.Method != http.MethodGet && r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return

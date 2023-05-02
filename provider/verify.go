@@ -3,8 +3,10 @@ package provider
 import (
 	"bytes"
 	"crypto/sha1"
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"mime"
 	"net/http"
 	"strings"
 	"time"
@@ -22,14 +24,15 @@ import (
 // can be email, IM or anything else implementing Sender interface
 type VerifyHandler struct {
 	logger.L
-	ProviderName string
-	TokenService VerifTokenService
-	Issuer       string
-	AvatarSaver  AvatarSaver
-	UserSaver    func(token.User) error
-	Sender       Sender
-	Template     string
-	UseGravatar  bool
+	ProviderName    string
+	TokenService    VerifTokenService
+	Issuer          string
+	AvatarSaver     AvatarSaver
+	PasswordExtract bool
+	UserSaver       func(token.User) error
+	Sender          Sender
+	Template        string
+	UseGravatar     bool
 }
 
 // Sender defines interface to send emails
@@ -55,7 +58,9 @@ type VerifTokenService interface {
 }
 
 // Name of the handler
-func (e VerifyHandler) Name() string { return e.ProviderName }
+func (e VerifyHandler) Name() string {
+	return e.ProviderName
+}
 
 // LoginHandler gets name and address from query, makes confirmation token and sends it to user.
 // In case if confirmation token presented in the query uses it to create auth token
@@ -92,6 +97,16 @@ func (e VerifyHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Name: user,
 		ID:   e.ProviderName + "_" + token.HashID(sha1.New(), address),
 	}
+
+	if e.PasswordExtract {
+		password, err := e.getPassword(w, r)
+		if err != nil || password == "" {
+			rest.SendErrorJSON(w, r, e.L, http.StatusBadRequest, err, "bad body payload")
+			return
+		}
+		u.Password = password
+	}
+
 	// try to get gravatar for email
 	if e.UseGravatar && strings.Contains(address, "@") { // TODO: better email check to avoid silly hits to gravatar api
 		if picURL, e := avatar.GetGravatarURL(address); e == nil {
@@ -139,9 +154,50 @@ func (e VerifyHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	rest.RenderJSON(w, claims.User)
 }
 
+// getPassword extracts password from request
+func (e VerifyHandler) getPassword(w http.ResponseWriter, r *http.Request) (string, error) {
+	// GET /something?user=name&passwd=xyz&aud=bar
+	if r.Method == "GET" {
+		return r.URL.Query().Get("passwd"), nil
+	}
+
+	if r.Method != "POST" {
+		return "", fmt.Errorf("method %s not supported", r.Method)
+	}
+
+	if r.Body != nil {
+		r.Body = http.MaxBytesReader(w, r.Body, MaxHTTPBodySize)
+	}
+	contentType := r.Header.Get("Content-Type")
+	if contentType != "" {
+		mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		if err != nil {
+			return "", err
+		}
+		contentType = mt
+	}
+
+	// POST with json body
+	if contentType == "application/json" {
+		var creds struct {
+			Password string `json:"passwd"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+			return "", fmt.Errorf("failed to parse request body: %w", err)
+		}
+		return creds.Password, nil
+	}
+
+	// POST with form
+	if err := r.ParseForm(); err != nil {
+		return "", fmt.Errorf("failed to parse request: %w", err)
+	}
+
+	return r.Form.Get("passwd"), nil
+}
+
 // GET /login?site=site&user=name&address=someone@example.com
 func (e VerifyHandler) sendConfirmation(w http.ResponseWriter, r *http.Request) {
-
 	user, address := r.URL.Query().Get("user"), r.URL.Query().Get("address")
 	user = e.sanitize(user)
 	address = e.sanitize(address)

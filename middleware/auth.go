@@ -214,7 +214,6 @@ func (a *Authenticator) basicAdminUser(r *http.Request) bool {
 // RBAC middleware allows role based control for routes
 // this handler internally wrapped with auth(true) to avoid situation if RBAC defined without prior Auth
 func (a *Authenticator) RBAC(roles ...string) func(http.Handler) http.Handler {
-
 	f := func(h http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			user, err := token.GetUserInfo(r)

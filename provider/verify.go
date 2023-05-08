@@ -24,15 +24,15 @@ import (
 // can be email, IM or anything else implementing Sender interface
 type VerifyHandler struct {
 	logger.L
-	ProviderName    string
-	TokenService    VerifTokenService
-	Issuer          string
-	AvatarSaver     AvatarSaver
-	PasswordExtract bool
-	UserSaver       func(token.User) error
-	Sender          Sender
-	Template        *template.Template
-	UseGravatar     bool
+	ProviderName string
+	TokenService VerifTokenService
+	Issuer       string
+	AvatarSaver  AvatarSaver
+	UserSaver    func(token.User) error
+	WithPassword bool
+	Sender       Sender
+	Template     *template.Template
+	UseGravatar  bool
 }
 
 // Sender defines interface to send emails
@@ -54,6 +54,7 @@ type VerifTokenService interface {
 	Parse(tokenString string) (claims token.Claims, err error)
 	IsExpired(claims token.Claims) bool
 	Set(w http.ResponseWriter, claims token.Claims) (token.Claims, error)
+	Get(r *http.Request) (claims token.Claims, token string, err error)
 	Reset(w http.ResponseWriter)
 }
 
@@ -85,28 +86,48 @@ func (e VerifyHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if confClaims.Handshake.State != "confirm" {
+		rest.SendErrorJSON(w, r, e.L, http.StatusForbidden, fmt.Errorf("confirm"), "failed to verify confirmation token")
+		return
+	}
+
 	elems := strings.Split(confClaims.Handshake.ID, "::")
 	if len(elems) != 2 {
 		rest.SendErrorJSON(w, r, e.L, http.StatusBadRequest, fmt.Errorf("%s", confClaims.Handshake.ID), "invalid handshake token")
 		return
 	}
+
 	user, address := elems[0], elems[1]
-	sessOnly := r.URL.Query().Get("sess") == "1"
+	sessOnly := r.URL.Query().Get("session") == "1"
+
+	if e.WithPassword {
+		claims := token.Claims{
+			Handshake: &token.Handshake{
+				State: "credentials",
+				ID:    confClaims.Handshake.ID,
+			},
+			SessionOnly: sessOnly,
+			StandardClaims: jwt.StandardClaims{
+				Audience:  e.sanitize(r.URL.Query().Get("site")),
+				ExpiresAt: time.Now().Add(30 * time.Minute).Unix(),
+				NotBefore: time.Now().Add(-1 * time.Minute).Unix(),
+				Issuer:    e.Issuer,
+			},
+		}
+
+		if _, err = e.TokenService.Set(w, claims); err != nil {
+			rest.SendErrorJSON(w, r, e.L, http.StatusForbidden, err, "failed to set token")
+			return
+		}
+
+		rest.RenderJSON(w, "confirmed")
+		return
+	}
 
 	u := token.User{
 		Name: user,
 		ID:   e.ProviderName + "_" + token.HashID(sha1.New(), address),
 	}
-
-	if e.PasswordExtract {
-		password, err := e.getPassword(w, r)
-		if err != nil || password == "" {
-			rest.SendErrorJSON(w, r, e.L, http.StatusBadRequest, err, "bad body payload")
-			return
-		}
-		u.Password = password
-	}
-
 	// try to get gravatar for email
 	if e.UseGravatar && strings.Contains(address, "@") { // TODO: better email check to avoid silly hits to gravatar api
 		if picURL, e := avatar.GetGravatarURL(address); e == nil {
@@ -154,48 +175,6 @@ func (e VerifyHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	rest.RenderJSON(w, claims.User)
 }
 
-// getPassword extracts password from request
-func (e VerifyHandler) getPassword(w http.ResponseWriter, r *http.Request) (string, error) {
-	// GET /something?user=name&passwd=xyz&aud=bar
-	if r.Method == "GET" {
-		return r.URL.Query().Get("passwd"), nil
-	}
-
-	if r.Method != "POST" {
-		return "", fmt.Errorf("method %s not supported", r.Method)
-	}
-
-	if r.Body != nil {
-		r.Body = http.MaxBytesReader(w, r.Body, MaxHTTPBodySize)
-	}
-	contentType := r.Header.Get("Content-Type")
-	if contentType != "" {
-		mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
-		if err != nil {
-			return "", err
-		}
-		contentType = mt
-	}
-
-	// POST with json body
-	if contentType == "application/json" {
-		var creds struct {
-			Password string `json:"passwd"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-			return "", fmt.Errorf("failed to parse request body: %w", err)
-		}
-		return creds.Password, nil
-	}
-
-	// POST with form
-	if err := r.ParseForm(); err != nil {
-		return "", fmt.Errorf("failed to parse request: %w", err)
-	}
-
-	return r.Form.Get("passwd"), nil
-}
-
 // GET /login?site=site&user=name&address=someone@example.com
 func (e VerifyHandler) sendConfirmation(w http.ResponseWriter, r *http.Request) {
 	user, address := r.URL.Query().Get("user"), r.URL.Query().Get("address")
@@ -209,7 +188,7 @@ func (e VerifyHandler) sendConfirmation(w http.ResponseWriter, r *http.Request) 
 
 	claims := token.Claims{
 		Handshake: &token.Handshake{
-			State: "",
+			State: "confirm",
 			ID:    user + "::" + address,
 		},
 		SessionOnly: r.URL.Query().Get("session") != "" && r.URL.Query().Get("session") != "0",
@@ -253,7 +232,65 @@ func (e VerifyHandler) sendConfirmation(w http.ResponseWriter, r *http.Request) 
 }
 
 // AuthHandler doesn't do anything for direct login as it has no callbacks
-func (e VerifyHandler) AuthHandler(http.ResponseWriter, *http.Request) {}
+func (e VerifyHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
+	if !e.WithPassword {
+		return
+	}
+
+	claims, _, err := e.TokenService.Get(r)
+	if err != nil {
+		rest.SendErrorJSON(w, r, e.L, http.StatusInternalServerError, err, "failed to get token")
+		return
+	}
+
+	if claims.Handshake == nil || claims.Handshake.State != "credentials" {
+		rest.SendErrorJSON(w, r, e.L, http.StatusInternalServerError, err, "invalid kind of token")
+		return
+	}
+
+}
+
+// getPassword extracts password from request
+func (e VerifyHandler) getPassword(w http.ResponseWriter, r *http.Request) (string, error) {
+	// GET /something?user=name&passwd=xyz&aud=bar
+	if r.Method == "GET" {
+		return r.URL.Query().Get("passwd"), nil
+	}
+
+	if r.Method != "POST" {
+		return "", fmt.Errorf("method %s not supported", r.Method)
+	}
+
+	if r.Body != nil {
+		r.Body = http.MaxBytesReader(w, r.Body, MaxHTTPBodySize)
+	}
+	contentType := r.Header.Get("Content-Type")
+	if contentType != "" {
+		mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+		if err != nil {
+			return "", err
+		}
+		contentType = mt
+	}
+
+	// POST with json body
+	if contentType == "application/json" {
+		var creds struct {
+			Password string `json:"passwd"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
+			return "", fmt.Errorf("failed to parse request body: %w", err)
+		}
+		return creds.Password, nil
+	}
+
+	// POST with form
+	if err := r.ParseForm(); err != nil {
+		return "", fmt.Errorf("failed to parse request: %w", err)
+	}
+
+	return r.Form.Get("passwd"), nil
+}
 
 // LogoutHandler - GET /logout
 func (e VerifyHandler) LogoutHandler(w http.ResponseWriter, _ *http.Request) {

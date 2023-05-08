@@ -3,6 +3,7 @@ package auth
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -347,18 +348,17 @@ func (s *Service) AddDirectProviderWithUserIDFunc(credChecker provider.CredCheck
 }
 
 // AddVerifProvider adds provider user's verification sent by sender
-func (s *Service) AddVerifProvider(name, msgTmpl string, sender provider.Sender, passwordExtract bool) {
+func (s *Service) AddVerifProvider(name string, tmpl *template.Template, sender provider.Sender) {
 	dh := provider.VerifyHandler{
-		L:               s.logger,
-		ProviderName:    name,
-		Issuer:          s.issuer,
-		TokenService:    s.jwtService,
-		AvatarSaver:     s.avatarProxy,
-		UserSaver:       s.opts.UserSaver,
-		PasswordExtract: passwordExtract,
-		Sender:          sender,
-		Template:        msgTmpl,
-		UseGravatar:     s.useGravatar,
+		L:            s.logger,
+		ProviderName: name,
+		Issuer:       s.issuer,
+		TokenService: s.jwtService,
+		AvatarSaver:  s.avatarProxy,
+		UserSaver:    s.opts.UserSaver,
+		Sender:       sender,
+		Template:     tmpl,
+		UseGravatar:  s.useGravatar,
 	}
 	s.providers = append(s.providers, provider.NewService(dh))
 	s.authMiddleware.Providers = s.providers

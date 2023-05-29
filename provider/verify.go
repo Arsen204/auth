@@ -106,6 +106,10 @@ func (e VerifyHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 				State: "credentials",
 				ID:    confClaims.Handshake.ID,
 			},
+			User: &token.User{
+				Name: user,
+				ID:   e.ProviderName + "_" + token.HashID(sha1.New(), address),
+			},
 			SessionOnly: sessOnly,
 			StandardClaims: jwt.StandardClaims{
 				Audience:  e.sanitize(r.URL.Query().Get("site")),
@@ -237,6 +241,8 @@ func (e VerifyHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	sessOnly := r.URL.Query().Get("session") == "1"
+
 	claims, _, err := e.TokenService.Get(r)
 	if err != nil {
 		rest.SendErrorJSON(w, r, e.L, http.StatusInternalServerError, err, "failed to get token")
@@ -247,6 +253,37 @@ func (e VerifyHandler) AuthHandler(w http.ResponseWriter, r *http.Request) {
 		rest.SendErrorJSON(w, r, e.L, http.StatusInternalServerError, err, "invalid kind of token")
 		return
 	}
+
+	if e.UserSaver != nil {
+		err = e.UserSaver(*claims.User)
+		if err != nil {
+			rest.SendErrorJSON(w, r, e.L, http.StatusInternalServerError, err, "failed to save user")
+			return
+		}
+	}
+
+	cid, err := randToken()
+	if err != nil {
+		rest.SendErrorJSON(w, r, e.L, http.StatusInternalServerError, err, "can't make token id")
+		return
+	}
+
+	authClaims := token.Claims{
+		User: claims.User,
+		StandardClaims: jwt.StandardClaims{
+			Id:       cid,
+			Issuer:   e.Issuer,
+			Audience: claims.Audience,
+		},
+		SessionOnly: sessOnly,
+	}
+
+	if _, err = e.TokenService.Set(w, authClaims); err != nil {
+		rest.SendErrorJSON(w, r, e.L, http.StatusInternalServerError, err, "failed to set token")
+		return
+	}
+
+	rest.RenderJSON(w, authClaims.User)
 
 }
 

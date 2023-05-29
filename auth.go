@@ -348,7 +348,7 @@ func (s *Service) AddDirectProviderWithUserIDFunc(credChecker provider.CredCheck
 }
 
 // AddVerifProvider adds provider user's verification sent by sender
-func (s *Service) AddVerifProvider(name string, tmpl *template.Template, sender provider.Sender) {
+func (s *Service) AddVerifProvider(name string, tmpl *template.Template, sender provider.Sender, withPassword bool) {
 	dh := provider.VerifyHandler{
 		L:            s.logger,
 		ProviderName: name,
@@ -359,6 +359,7 @@ func (s *Service) AddVerifProvider(name string, tmpl *template.Template, sender 
 		Sender:       sender,
 		Template:     tmpl,
 		UseGravatar:  s.useGravatar,
+		WithPassword: withPassword,
 	}
 	s.providers = append(s.providers, provider.NewService(dh))
 	s.authMiddleware.Providers = s.providers
